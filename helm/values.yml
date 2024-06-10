@@ -1,0 +1,238 @@
+## Global Name
+name: "terrakube"
+
+global:
+  imagePullSecrets: []
+
+## OpenLdap
+openldap:
+  podLabels: {}
+  securityContext: {}
+  containerSecurityContext: {}
+
+## Dex
+dex:
+  enabled: true
+  existingSecret: false
+  config:
+    issuer: http://terrakube-api.[your_r53_domain]/dex
+
+    storage:
+      type: memory
+    web:
+      http: 0.0.0.0:5556
+      allowedOrigins: ['*']
+      skipApprovalScreen: true
+    oauth2:
+      responseTypes: ["code", "token", "id_token"]
+
+    connectors:
+    - type: ldap
+      name: OpenLDAP
+      id: ldap
+      config:
+        host: terrakube-openldap-service:1389
+        insecureNoSSL: true
+        bindDN: cn=admin,dc=example,dc=org
+        bindPW: admin
+        usernamePrompt: Email Address
+        userSearch:
+          baseDN: ou=users,dc=example,dc=org
+          filter: "(objectClass=person)"
+          username: mail
+          idAttr: DN
+          emailAttr: mail
+          nameAttr: cn
+
+        groupSearch:
+          baseDN: ou=Groups,dc=example,dc=org
+          filter: "(objectClass=groupOfNames)"
+
+          userMatchers:
+            # A user is a member of a group when their DN matches
+            # the value of a "member" attribute on the group entity.
+          - userAttr: DN
+            groupAttr: member
+          nameAttr: cn
+
+    staticClients:
+    - id: example-app
+      redirectURIs:
+      - 'http://terrakube-ui.[your_r53_domain]'
+      - '/device/callback'
+      - 'http://localhost:10000/login'
+      - 'http://localhost:10001/login'
+      name: 'example-app'
+      public: true
+  volumes:
+  - name: gcp-credentials
+    secret:
+      secretName: terrakube-dex-secrets
+      items:
+      - key: "gcp-credentials"
+        path: "gcp-credentials"
+  volumeMount:
+  - name: gcp-credentials
+    mountPath: /etc/gcp/secret
+    readOnly: true
+
+
+## Terraform Storage
+storage:
+  defaultStorage: true
+  aws:
+    accessKey: ""
+    secretKey: ""
+    bucketName: ""
+    region: ""
+  default:
+    region: ""
+    endpoint: "http://terrakube-minio:9000"
+
+# Default Storage Minio Configuration
+minio:
+  auth:
+    rootUser: "admin"
+    rootPassword: ""
+  defaultBuckets: ""
+
+# Default Database Postgresql
+postgresql:
+  auth:
+    username: ""
+    password: ""
+    database: ""
+
+# Default Redis Configuration
+redis:
+  architecture: "standalone"
+  auth:
+    enabled: true
+    password: "7"
+
+## API properties
+api:
+  existingSecret: false
+  enabled: true
+  image: azbuilder/api-server
+  version: ""
+  replicaCount: "1"
+  serviceType: "ClusterIP"
+  serviceAccountName: ""
+  resources: {}
+  podLabels: {}
+  defaultDatabase: true
+  defaultRedis: true
+  loadSampleData: true
+  terraformReleasesUrl: "https://releases.hashicorp.com/terraform/index.json"
+  securityContext: {}
+  containerSecurityContext: {}
+  imagePullSecrets: []
+  cache:
+    moduleCacheMaxTotal: "128"
+    moduleCacheMaxIdle: "128"
+    moduleCacheMinIdle: "64"
+    moduleCacheTimeout: "600000"
+    moduleCacheSchedule: "0 */3 * ? * *"
+  properties:
+    databaseType: "POSTGRESQL"
+    databaseHostname: ""
+    databaseName: ""
+    databaseUser: ""
+    databaseSchema: "public"
+    databasePassword: ""
+    databaseSslMode: "disable"
+    databasePort: "3306"
+    redisHostname: "redis"
+    redisPassword: ""
+
+## Executor properties
+executor:
+  existingSecret: false
+  enabled: true
+  image: "azbuilder/executor"
+  version: ""
+  replicaCount: "1"
+  serviceType: "ClusterIP"
+  serviceAccountName: ""
+  resources: {}
+  podLabels: {}
+  apiServiceUrl: "http://terrakube-api-service:8080"
+  properties:
+    toolsRepository: "https://github.com/AzBuilder/terrakube-extensions"
+    toolsBranch: "main"
+  securityContext: {}
+  containerSecurityContext: {}
+  imagePullSecrets: []
+
+## Registry properties
+registry:
+  enabled: true
+  existingSecret: false
+  image: azbuilder/open-registry
+  version: ""
+  replicaCount: "1"
+  serviceType: "ClusterIP"
+  serviceAccountName: ""
+  resources: {}
+  podLabels: {}
+  securityContext: {}
+  containerSecurityContext: {}
+  imagePullSecrets: []
+
+## UI Properties
+ui:
+  enabled: true
+  existingSecret: false
+  image: azbuilder/terrakube-ui
+  version: ""
+  replicaCount: "1"
+  serviceType: "ClusterIP"
+  serviceAccountName: ""
+  resources: {}
+  podLabels: {}
+  securityContext: {}
+  containerSecurityContext: {}
+  imagePullSecrets: []
+
+## Ingress properties
+ingress:
+  useTls: true
+  ui:
+    domain: "terrakube-ui.[your_r53_domain]"
+    enabled: true
+    path: "/"
+    pathType: "Prefix"
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/use-regex: "true"
+  api:
+    enabled: true
+    domain: "terrakube-api.[your_r53_domain]"
+    path: "/"
+    pathType: "Prefix"
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header Authorization $http_authorization;"
+
+  registry:
+    enabled: true
+    domain: "terrakube-reg.[your_r53_domain]"
+    path: "/"
+    pathType: "Prefix"
+    ingressClassName: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header Authorization $http_authorization;"
+  dex:
+    enabled: true
+    path: "/dex/"
+    pathType: "Prefix"
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header Authorization $http_authorization;"
+
+
