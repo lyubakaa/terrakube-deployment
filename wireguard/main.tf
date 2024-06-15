@@ -1,5 +1,3 @@
-# wireguard/main.tf
-
 resource "aws_instance" "bastion" {
   ami                    = var.vpn_ami_type
   instance_type          = var.vpn_instance_type

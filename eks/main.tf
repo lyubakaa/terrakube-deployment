@@ -1,4 +1,3 @@
-# this is root/eks/main.tf
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.13.1"

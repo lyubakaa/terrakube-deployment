@@ -6,15 +6,15 @@ data "aws_availability_zones" "available" {}
 
 ## Local values for reuse throughout the configuration
 locals {
-  name            = var.name  # Name for the resources
-  region          = var.region  # AWS region
-  cluster_version = var.cluster_version  # Kubernetes cluster version
-  instance_types  = ["t2.large"]  # Instance types for EKS node group
-  vpc_cidr        = var.vpc_cidr  # CIDR block for VPC
-  azs             = slice(data.aws_availability_zones.available.names, 0, 3)  # Availability zones to be used
+  name            = var.name  
+  region          = var.region  
+  cluster_version = var.cluster_version  
+  instance_types  = ["t2.large"]  
+  vpc_cidr        = var.vpc_cidr  
+  azs             = slice(data.aws_availability_zones.available.names, 0, 3)  
   tags = {
-    Blueprint  = local.name  # Tag to identify the blueprint
-    GitHubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"  # GitHub repository link
+    Blueprint  = local.name  
+    GitHubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"  
   }
 }
 
